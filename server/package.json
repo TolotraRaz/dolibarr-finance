@@ -1,0 +1,21 @@
+{
+  "name": "newapp-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Backend Express + SQLite pour la configuration des remises",
+  "main": "index.js",
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.19.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  }
+}

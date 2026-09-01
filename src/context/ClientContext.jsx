@@ -20,7 +20,6 @@ export const ClientProvider = ({ children }) => {
   const logout = () => {
     setClient(null);
     sessionStorage.removeItem('frontoffice_client');
-    sessionStorage.removeItem('cart_items');
   };
 
   return (

@@ -14,8 +14,12 @@ const calculerTTC = (pu, tauxTaxe) => {
   return prixHT * (1 + taxe / 100);
 };
 
+const TAUX_TVA_DEFAUT = 20; // Taux appliqué si le produit n'a pas de tva_tx défini
+
 const getMaxPriceTTC = (product) => {
-  const tauxTaxe = product.tva_tx || 0;
+  const tauxTaxe = (product.tva_tx && parseFloat(product.tva_tx) > 0)
+    ? parseFloat(product.tva_tx)
+    : TAUX_TVA_DEFAUT;
 
   if (product.multiprices && typeof product.multiprices === 'object') {
     const valeursTTC = Object.values(product.multiprices)

@@ -28,26 +28,17 @@ const Visualisation = () => {
     setProgress(0);
     setShowStats(false);
 
-    // Barre de progression (simulation)
-    const interval = setInterval(() => {
-      setProgress(prev => {
-        if (prev >= 90) {
-          clearInterval(interval);
-          return 90;
-        }
-        return prev + 10;
-      });
-    }, 500);
-
     try {
-      const result = await processImportedData(factures, details, paiements);
-      
-      clearInterval(interval);
-      setProgress(100);
+      const result = await processImportedData(
+        factures,
+        details,
+        paiements,
+        (pct) => setProgress(pct)   // callback de progression réelle
+      );
+
       setStats(result);
       setShowStats(true);
     } catch (error) {
-      clearInterval(interval);
       setProgress(100);
       setStats({
         success: 0,
@@ -204,7 +195,7 @@ const Visualisation = () => {
               </div>
             </div>
             
-            {stats.errorDetails.length > 0 && (
+            {stats.errorDetails && stats.errorDetails.length > 0 && (
               <div style={{ marginTop: '15px' }}>
                 <h4 style={{ color: '#dc3545' }}>Détails des erreurs :</h4>
                 <ul style={{ color: '#666', fontSize: '14px' }}>
@@ -212,6 +203,25 @@ const Visualisation = () => {
                     <li key={i}>• {error}</li>
                   ))}
                 </ul>
+              </div>
+            )}
+
+            {/* Affichage des remises calculées */}
+            {stats.discounts && stats.discounts.total > 0 && (
+              <div style={{ marginTop: '15px', padding: '15px', backgroundColor: '#e8f5e9', borderRadius: '5px' }}>
+                <h4 style={{ color: '#2e7d32' }}> Remises appliquées</h4>
+                <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+                  <div>
+                    <span style={{ color: '#666' }}>Nombre de remises :</span>
+                    <strong style={{ marginLeft: '8px' }}>{stats.discounts.total}</strong>
+                  </div>
+                  <div>
+                    <span style={{ color: '#666' }}>Total économisé :</span>
+                    <strong style={{ marginLeft: '8px', color: '#2e7d32' }}>
+                      {stats.discounts.totalDiscount?.toFixed(2) || '0.00'}€
+                    </strong>
+                  </div>
+                </div>
               </div>
             )}
 

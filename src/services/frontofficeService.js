@@ -10,21 +10,28 @@ import {
 
 // Connexion / auto-inscription par nom
 export const loginOrRegisterClient = async (name) => {
-  const trimmed = name.trim();
+  const trimmed = name.trim().replace(/\s+/g, ' ');
   if (!trimmed) throw new Error('Le nom est obligatoire');
 
   let client = await findThirdpartyByName(trimmed);
-  if (!client) {
-    const result = await createCustomer({
-      name: trimmed,
-      client: 1,
-      status: 1
-    });
-    // Dolibarr renvoie l'ID brut (nombre), pas un objet — on normalise ici
-    const newId = (result && typeof result === 'object') ? result.id : result;
-    client = { id: newId, name: trimmed };
+  if (client) {
+    return client; // client existant → login normal
   }
-  return client;
+
+  // Double vérification juste avant la création, pour limiter la fenêtre
+  // de concurrence (deux onglets créant le même nom en même temps)
+  const recheck = await findThirdpartyByName(trimmed);
+  if (recheck) {
+    return recheck;
+  }
+
+  const result = await createCustomer({
+    name: trimmed,
+    client: 1,
+    status: 1
+  });
+  const newId = (result && typeof result === 'object') ? result.id : result;
+  return { id: newId, name: trimmed };
 };
 
 export const fetchProducts = async () => {
@@ -42,8 +49,12 @@ const formatDateISO = (date) => {
 export const todayISO = () => formatDateISO(new Date());
 
 export const addDaysISO = (days) => {
+  const nbJours = Number(days);
+  if (!Number.isInteger(nbJours) || nbJours <= 0) {
+    throw new Error('Nombre de jours invalide');
+  }
   const d = new Date();
-  d.setDate(d.getDate() + parseInt(days, 10));
+  d.setDate(d.getDate() + nbJours);
   return formatDateISO(d);
 };
 
@@ -67,7 +78,8 @@ export const createInvoiceFromCart = async (client, cartItems, dateLimReglement)
       subprice: parseFloat(item.selectedPrice ?? item.price),
       tva_tx: parseFloat(item.tva || 0),
       ref: item.ref,
-      fk_product: item.id
+      fk_product: item.id,
+      remise_percent: parseFloat(item.remise || 0)
     });
   }
 

@@ -70,7 +70,9 @@ const Paiement = () => {
             continue;
           }
 
-          infos[id] = { ref: invoice.ref, dateFacture: invoice.date, total, restant };
+          // Fallback identique à importService.js : échéance en priorité, sinon date de facture
+          const dateReference = invoice.date_lim_reglement || invoice.date;
+          infos[id] = { ref: invoice.ref, dateEcheance: dateReference, total, restant };
         } catch {
           removePendingInvoice(id);
         }
@@ -95,12 +97,29 @@ const Paiement = () => {
     const info = invoicesInfo[selectedInvoiceId];
     if (!info) return;
 
-    const dateFacture = new Date(info.dateFacture * 1000 || info.dateFacture);
+    // Dolibarr renvoie souvent un timestamp Unix (secondes) pour les dates ; gérer les deux formats
+    const parseDolibarrDate = (val) => {
+      if (val === null || val === undefined) return null;
+      // Timestamp Unix numérique (secondes)
+      if (typeof val === 'number' || /^\d+$/.test(String(val))) {
+        return new Date(Number(val) * 1000);
+      }
+      // Chaîne ISO ou YYYY-MM-DD
+      return new Date(val);
+    };
+
+    const dateEcheance = parseDolibarrDate(info.dateEcheance);
     const datePaye = new Date(datePaiement);
-    const jours = Math.max(0, Math.floor((datePaye - dateFacture) / (1000 * 60 * 60 * 24)));
+
+    if (!dateEcheance || isNaN(dateEcheance.getTime())) {
+      setDiscountInfo({ jours: 0, pourcentage: 0, label: 'Date de référence invalide' });
+      return;
+    }
+
+    const jours = Math.max(0, Math.floor((datePaye - dateEcheance) / (1000 * 60 * 60 * 24)));
 
     try {
-      const result = await calculateDiscount(jours);
+      const result = await calculateDiscount(jours, datePaiement);
       setDiscountInfo({ jours, ...result });
     } catch {
       setDiscountInfo({ jours, pourcentage: 0 });

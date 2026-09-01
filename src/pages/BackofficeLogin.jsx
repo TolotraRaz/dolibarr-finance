@@ -12,9 +12,12 @@ const BackofficeLogin = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-
+  
     if (code === expectedCode) {
-      sessionStorage.setItem('backoffice_auth', 'true');
+      localStorage.setItem('backoffice_auth', JSON.stringify({
+        auth: true,
+        timestamp: Date.now()
+      }));
       setError('');
       navigate(from, { replace: true });
     } else {

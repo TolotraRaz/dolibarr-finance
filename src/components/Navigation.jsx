@@ -1,9 +1,10 @@
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useClient } from '../context/ClientContext';
 
 const Navigation = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const { client, logout } = useClient();
 
   const isActive = (path) => {
@@ -11,6 +12,11 @@ const Navigation = () => {
   };
 
   const isFrontoffice = location.pathname.startsWith('/boutique') || location.pathname === '/client-login';
+
+  const handleBackofficeLogout = () => {
+    localStorage.removeItem('backoffice_auth');
+    navigate('/login', { replace: true });
+  };
 
   const handleClientLogout = () => {
     logout();
@@ -79,10 +85,7 @@ const Navigation = () => {
             Espace Client
           </Link>
           <button
-            onClick={() => {
-              sessionStorage.removeItem('backoffice_auth');
-              window.location.href = '/login';
-            }}
+            onClick={handleBackofficeLogout}
             className="btn btn-secondary"
             style={{ marginLeft: '10px', padding: '6px 12px', fontSize: '14px' }}
           >

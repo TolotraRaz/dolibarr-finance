@@ -203,17 +203,23 @@ app.delete('/api/discount-rules/:id', (req, res) => {
 });
 
 // Route pour calculer le pourcentage de remise en fonction du nombre de jours
+// Route pour calculer le pourcentage de remise en fonction du nombre de jours
 app.get('/api/discount-rules/calculate/:jours', (req, res) => {
   try {
     const jours = parseInt(req.params.jours);
-    
+
     if (isNaN(jours) || jours < 0) {
-      return res.status(400).json({ 
-        error: 'Le paramètre jours doit être un nombre positif' 
+      return res.status(400).json({
+        error: 'Le paramètre jours doit être un nombre positif'
       });
     }
-    
-    const jourActuel = new Date().getDate(); // 1 à 31
+
+    // Utiliser la date fournie (date réelle du paiement) au lieu de la date système
+    const dateRef = req.query.date ? new Date(req.query.date) : new Date();
+    if (isNaN(dateRef.getTime())) {
+      return res.status(400).json({ error: 'Paramètre date invalide' });
+    }
+    const jourActuel = dateRef.getDate(); // 1 à 31
 
     const candidats = db.prepare(`
       SELECT * FROM discount_rules 
@@ -223,15 +229,15 @@ app.get('/api/discount-rules/calculate/:jours', (req, res) => {
     `).all(jours, jours);
 
     const rule = candidats.find(r => jourDansIntervalle(jourActuel, r.jour_debut, r.jour_fin));
-    
+
     if (!rule) {
-      return res.json({ 
-        jours, 
-        pourcentage: 0, 
-        label: 'Aucune règle trouvée' 
+      return res.json({
+        jours,
+        pourcentage: 0,
+        label: 'Aucune règle trouvée'
       });
     }
-    
+
     res.json({
       jours,
       pourcentage: rule.pourcentage,

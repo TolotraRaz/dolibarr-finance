@@ -30,7 +30,7 @@ function App() {
               <Route path="/login" element={<BackofficeLogin />} />
               <Route path="/" element={<Navigate to="/dashboard" replace />} />
               <Route path="/importation" element={<ProtectedRoute><Importation /></ProtectedRoute>} />
-              <Route path="/visualisation" element={<Visualisation />} />
+              <Route path="/visualisation" element={<ProtectedRoute><Visualisation /></ProtectedRoute>} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/reinitialisation" element={<ProtectedRoute><Reinitialisation /></ProtectedRoute>} />
               <Route path="/configuration-remise" element={<ProtectedRoute><ConfigurationRemise /></ProtectedRoute>} />

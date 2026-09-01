@@ -9,7 +9,8 @@ import {
   getProductByRef,
   validateInvoice,
   addSellingPrice,
-  getAllInvoices
+  getAllInvoices,
+  findThirdpartyByCode   
 } from './api';
 import api from './api';
 // Importer le service de calcul des remises
@@ -46,7 +47,7 @@ const calculateDiscountForPayment = async (invoiceDate, paymentDate, invoiceAmou
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
     // Appeler l'API de calcul
-    const result = await calculateDiscount(diffDays);
+    const result = await calculateDiscount(diffDays, paymentDateISO);
     
     // Calculer les montants
     const discountAmount = invoiceAmount * (result.pourcentage / 100);
@@ -175,8 +176,36 @@ const getOrCreateProduct = async (ref_produit, produit, pu_hors_Taxe, taxe) => {
   }
 };
 
-// Traiter les données importées - VERSION AVEC CALCUL DES REMISES
-export const processImportedData = async (factures, details, paiements) => {
+// Créer ou récupérer un client
+const getOrCreateCustomer = async (code_client, nom_client) => {
+  try {
+    let thirdparty = await findThirdpartyByCode(code_client);
+    if (thirdparty) {
+      console.log(`Client existant: ${code_client} (ID: ${thirdparty.id})`);
+      return thirdparty.id;
+    }
+
+    const clientData = {
+      name: nom_client,
+      code_client: code_client,
+      client: 1,
+      status: 1
+    };
+
+    console.log(`Création client ${code_client}:`, clientData);
+    const clientId = await createCustomer(clientData);
+
+    console.log(`Client créé: ${code_client} (ID: ${clientId})`);
+    return clientId;
+
+  } catch (error) {
+    console.error(`Erreur création client ${code_client}:`, error);
+    throw error;
+  }
+};
+
+// Traiter les données importées - VERSION AVEC CALCUL DES REMISES ET PROGRESSION
+export const processImportedData = async (factures, details, paiements, onProgress = () => {}) => {
   const results = {
     success: 0,
     errors: 0,
@@ -189,6 +218,25 @@ export const processImportedData = async (factures, details, paiements) => {
 
   // Réinitialiser les remises calculées
   calculatedDiscounts = [];
+
+  // Calcul du nombre total d'étapes pour la progression réelle
+  const uniqueClients = new Set(factures.map(f => f.code_client)).size;
+  const uniqueProductRefs = new Set(details.map(d => d.ref_produit)).size;
+
+  const totalSteps =
+    uniqueProductRefs +      // création/récupération produits
+    uniqueClients +          // création clients
+    factures.length +        // création factures
+    details.length +         // création lignes
+    factures.length +        // validation factures
+    paiements.length;        // création paiements
+
+  let completedSteps = 0;
+  const reportProgress = () => {
+    completedSteps++;
+    const pct = Math.min(99, Math.round((completedSteps / totalSteps) * 100));
+    onProgress(pct);
+  };
 
   try {
     // 0. CRÉATION DES PRODUITS
@@ -241,6 +289,7 @@ export const processImportedData = async (factures, details, paiements) => {
         results.errors++;
         results.errorDetails.push(`Erreur produit ${ref}: ${error.message}`);
       }
+      reportProgress();
     }
 
     // 1. Créer les clients
@@ -248,20 +297,14 @@ export const processImportedData = async (factures, details, paiements) => {
     for (const facture of factures) {
       if (!clientsMap.has(facture.code_client)) {
         try {
-          const clientData = {
-            name: facture.nom_client,
-            code_client: facture.code_client,
-            client: 1,
-            status: 1
-          };
-          const client = await createCustomer(clientData);
-          console.log(`[Client ${facture.code_client}] Créé (ID: ${client})`);
-          clientsMap.set(facture.code_client, client);
+          const clientId = await getOrCreateCustomer(facture.code_client, facture.nom_client);
+          clientsMap.set(facture.code_client, clientId);
           results.success++;
         } catch (error) {
           results.errors++;
           results.errorDetails.push(`Erreur client ${facture.code_client}: ${error.message}`);
         }
+        reportProgress();
       }
     }
 
@@ -272,6 +315,7 @@ export const processImportedData = async (factures, details, paiements) => {
       if (!socid) {
         results.errors++;
         results.errorDetails.push(`Facture ${facture.num_facture} ignorée : client non créé`);
+        reportProgress();
         continue;
       }
       try {
@@ -291,6 +335,7 @@ export const processImportedData = async (factures, details, paiements) => {
         results.errors++;
         results.errorDetails.push(`Erreur facture ${facture.num_facture}: ${error.message}`);
       }
+      reportProgress();
     }
 
     // 3. Créer les lignes de facture
@@ -302,6 +347,7 @@ export const processImportedData = async (factures, details, paiements) => {
         if (!invoiceId) {
           results.errors++;
           results.errorDetails.push(`Ligne ${detail.ref_detail}: Facture ${detail.num_facture} non trouvée`);
+          reportProgress();
           continue;
         }
 
@@ -340,6 +386,7 @@ export const processImportedData = async (factures, details, paiements) => {
         results.errors++;
         results.errorDetails.push(`Erreur ligne ${detail.ref_detail}: ${error.message}`);
       }
+      reportProgress();
     }
 
     // 3bis. Valider les factures
@@ -351,6 +398,7 @@ export const processImportedData = async (factures, details, paiements) => {
         results.errors++;
         results.errorDetails.push(`Erreur validation ${numFacture}: ${error.message}`);
       }
+      reportProgress();
     }
 
     // 4. Créer les paiements AVEC CALCUL DES REMISES
@@ -363,6 +411,7 @@ export const processImportedData = async (factures, details, paiements) => {
       if (!invoiceId) {
         results.errors++;
         results.errorDetails.push(`Paiement ${factureRef}: facture liée introuvable`);
+        reportProgress();
         continue;
       }
 
@@ -375,6 +424,7 @@ export const processImportedData = async (factures, details, paiements) => {
         results.errorDetails.push(
           `Paiement facture ${factureRef}: caisse "${paiement.caisse}" non reconnue`
         );
+        reportProgress();
         continue;
       }
 
@@ -442,6 +492,7 @@ export const processImportedData = async (factures, details, paiements) => {
         results.errors++;
         results.errorDetails.push(`Erreur paiement ${factureRef}: ${error.message}`);
       }
+      reportProgress();
     }
 
     // STOCKER LES REMISES CALCULÉES
@@ -468,6 +519,8 @@ export const processImportedData = async (factures, details, paiements) => {
     results.errorDetails.push(`Erreur générale: ${error.message}`);
   }
 
+  // Forcer la progression à 100%
+  onProgress(100);
   return results;
 };
 

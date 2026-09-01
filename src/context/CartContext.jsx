@@ -1,20 +1,34 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useClient } from './ClientContext';
 
 const CartContext = createContext(null);
 
 export const CartProvider = ({ children }) => {
-  const [items, setItems] = useState(() => {
-    try {
-      const stored = sessionStorage.getItem('cart_items');
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
+  const { client } = useClient();
+  const [items, setItems] = useState([]);
+  
+  // Clé de stockage dynamique, propre à chaque client
+  const getCartKey = (clientId) => `cart_items_${clientId}`;
+  
+  // Recharge le panier du client courant à chaque changement de client
+  // (connexion, déconnexion, changement de compte)
+  useEffect(() => {
+    if (!client) {
+      setItems([]);
+      return;
     }
-  });
+    try {
+      const stored = sessionStorage.getItem(getCartKey(client.id));
+      setItems(stored ? JSON.parse(stored) : []);
+    } catch {
+      setItems([]);
+    }
+  }, [client]);
 
   useEffect(() => {
-    sessionStorage.setItem('cart_items', JSON.stringify(items));
-  }, [items]);
+    if (!client) return;
+    sessionStorage.setItem(getCartKey(client.id), JSON.stringify(items));
+  }, [items, client]);
 
   const addItem = (product, quantite) => {
     setItems(prev => {
@@ -85,7 +99,9 @@ export const CartProvider = ({ children }) => {
 
   const clearCart = () => {
     setItems([]);
-    sessionStorage.removeItem('cart_items');
+    if (client) {
+      sessionStorage.removeItem(getCartKey(client.id));
+    }
   };
 
   const total = items.reduce((sum, i) => sum + (getEffectivePrice(i) * i.quantite), 0);

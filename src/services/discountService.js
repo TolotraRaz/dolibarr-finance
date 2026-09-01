@@ -35,8 +35,10 @@ export const deleteDiscountRule = async (id) => {
   return response.data;
 };
 
-export const calculateDiscount = async (jours) => {
-  const response = await discountApi.get(`/discount-rules/calculate/${jours}`);
+export const calculateDiscount = async (jours, dateReference) => {
+  const response = await discountApi.get(`/discount-rules/calculate/${jours}`, {
+    params: dateReference ? { date: dateReference } : {}
+  });
   return response.data;
 };
 

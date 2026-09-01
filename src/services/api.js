@@ -196,14 +196,36 @@ export const createCustomer = async (customerData) => {
   }
 };
 
+// Normalisation : trim, espaces multiples, minuscule, accents retirés
+const normalizeName = (str) =>
+  str
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+    
 // Rechercher un tiers par nom exact (recherche côté client pour rester compatible toutes versions Dolibarr)
 export const findThirdpartyByName = async (name) => {
   try {
     const response = await api.get('/thirdparties', { params: { limit: 1000 } });
     const list = Array.isArray(response.data) ? response.data : [];
-    return list.find(t => t.name?.trim().toLowerCase() === name.trim().toLowerCase()) || null;
+    const target = normalizeName(name);
+    return list.find(t => normalizeName(t.name || '') === target) || null;
   } catch (error) {
     throw error;
+  }
+};
+
+// Rechercher un tiers par son code_client (recherche côté client, car ce n'est pas un champ standard indexé par l'API Dolibarr)
+export const findThirdpartyByCode = async (code_client) => {
+  try {
+    const response = await api.get('/thirdparties', { params: { limit: 1000 } });
+    const list = Array.isArray(response.data) ? response.data : [];
+    return list.find(t => t.code_client?.trim() === code_client?.trim()) || null;
+  } catch (error) {
+    console.error('Erreur findThirdpartyByCode:', error.message);
+    return null;
   }
 };
 

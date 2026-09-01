@@ -164,7 +164,7 @@ function initializeDefaultRules() {
     insert.run('Moins de 7 jours', 1, 7, 20, 2, null, null);
     insert.run('Moins de 15 jours', 8, 15, 15, 3, null, null);
     insert.run('Moins de 30 jours', 16, 30, 7.5, 4, null, null);
-    insert.run('Plus d\'un mois', 31, null, 0, 4, null, null);
+    insert.run('Plus d\'un mois', 31, null, 0, 5, null, null);
     
     console.log('Règles de remise par défaut initialisées');
   }

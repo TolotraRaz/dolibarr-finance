@@ -19,11 +19,21 @@ const Panier = () => {
       setError('Votre panier est vide');
       return;
     }
-    if (modeReglement === 'delai' && (!nbJours || parseInt(nbJours, 10) <= 0)) {
-      setError('Veuillez saisir un nombre de jours valide');
-      return;
+    if (modeReglement === 'delai') {
+      const joursStr = String(nbJours).trim();
+      const jours = Number(joursStr);
+      const estEntierValide = joursStr !== '' && Number.isInteger(jours) && jours > 0;
+    
+      if (!estEntierValide) {
+        setError('Veuillez saisir un nombre de jours entier valide (supérieur à 0)');
+        return;
+      }
+      if (jours > 365) {
+        setError('Le délai ne peut pas dépasser 365 jours');
+        return;
+      }
     }
-
+    
     try {
       setSubmitting(true);
       setError('');

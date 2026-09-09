@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../../context/CartContext';
 import { useClient } from '../../context/ClientContext';
-import { createInvoiceFromCart, addDaysISO, todayISO, addPendingInvoice } from '../../services/frontofficeService';
+import { createInvoiceFromCart, addDaysISO, todayISO } from '../../services/frontofficeService';
 
 
 const Panier = () => {
@@ -44,7 +44,6 @@ const Panier = () => {
 
       const invoice = await createInvoiceFromCart(client, items, dateLimReglement);
 
-      addPendingInvoice(invoice.id);
       clearCart();
       navigate('/boutique/paiement', { state: { invoiceId: invoice.id } });
     } catch (err) {

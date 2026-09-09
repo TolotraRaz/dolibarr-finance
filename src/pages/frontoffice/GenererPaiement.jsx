@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { getPendingInvoiceIds, removePendingInvoice } from '../../services/frontofficeService';
+import { useClient } from '../../context/ClientContext';
+import { getClientUnpaidInvoices } from '../../services/frontofficeService';
 import { createEcheancier, getEcheanciersForFacture, payerEcheance, getReglementsForFacture, createReglement } from '../../services/discountService';
-import { createPayment, getInvoicesById } from '../../services/api';
+import { createPayment, getInvoicePayments } from '../../services/api';
 import { getAccountId, getPaymentId } from '../../services/importService';
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
 
 const GenererPaiement = () => {
+  const { client } = useClient();
   const [invoicesInfo, setInvoicesInfo] = useState({}); // { [id]: { ref, total, restant } }
   const [selectedInvoiceId, setSelectedInvoiceId] = useState(null);
 
@@ -43,40 +45,51 @@ const GenererPaiement = () => {
     try {
       setLoading(true);
       setError('');
-      const ids = getPendingInvoiceIds();
-      if (ids.length === 0) {
+
+      if (!client?.id) {
         setInvoicesInfo({});
         setSelectedInvoiceId(null);
         return;
       }
 
+      const unpaidInvoices = await getClientUnpaidInvoices(client.id);
+
       const infos = {};
-      for (const id of ids) {
+      for (const invoice of unpaidInvoices) {
         try {
-          const [invoice, reglements] = await Promise.all([
-            getInvoicesById(id),
-            getReglementsForFacture(id)
+          const [reglements, paiementsDolibarr] = await Promise.all([
+            getReglementsForFacture(invoice.id),
+            getInvoicePayments(invoice.id)
           ]);
+
           const total = parseFloat(invoice.total_ttc || invoice.total_ht || 0);
+
+          const totalEncaisseDolibarr = (Array.isArray(paiementsDolibarr) ? paiementsDolibarr : [])
+            .reduce((sum, p) => sum + parseFloat(p.amount || p.montant || 0), 0);
+
           const dejaCouvert = (Array.isArray(reglements) ? reglements : [])
             .reduce((sum, r) => sum + parseFloat(r.montant_couvert || 0), 0);
-          const restant = Math.max(0, Math.round((total - dejaCouvert) * 100) / 100);
 
-          if (restant <= 0.01) {
-            removePendingInvoice(id);
-            continue;
-          }
-          infos[id] = { ref: invoice.ref, total, restant };
+          const montantConsidereRegle = Math.max(totalEncaisseDolibarr, dejaCouvert);
+          const restant = Math.max(0, Math.round((total - montantConsidereRegle) * 100) / 100);
+
+          if (restant <= 0.01) continue;
+
+          infos[invoice.id] = { ref: invoice.ref, total, restant };
         } catch {
-          removePendingInvoice(id);
+          // Facture ignorée si ses données n'ont pas pu être récupérées
         }
       }
 
       setInvoicesInfo(infos);
       const idsRestants = Object.keys(infos);
-      if (idsRestants.length > 0) setSelectedInvoiceId(idsRestants[0]);
+      if (idsRestants.length > 0 && (!selectedInvoiceId || !infos[selectedInvoiceId])) {
+        setSelectedInvoiceId(idsRestants[0]);
+      } else if (idsRestants.length === 0) {
+        setSelectedInvoiceId(null);
+      }
     } catch {
-      setError('Impossible de charger vos factures en attente.');
+      setError('Impossible de charger vos factures impayées.');
     } finally {
       setLoading(false);
     }

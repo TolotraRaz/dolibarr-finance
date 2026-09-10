@@ -117,11 +117,19 @@ export const deleteInvoiceLine = async (invoiceId, lineId) => {
   }
 };
 
+// Repasser une facture en brouillon (nécessaire pour modifier/supprimer ses lignes)
 export const setInvoiceToDraft = async (invoiceId) => {
   try {
+    console.log(` POST /invoices/${invoiceId}/settodraft`);
     const response = await api.post(`/invoices/${invoiceId}/settodraft`);
+    console.log(`    Facture ${invoiceId} repassée en brouillon:`, response.data);
     return response.data;
   } catch (error) {
+    console.error(`    Échec settodraft(${invoiceId}):`, {
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.message
+    });
     throw error;
   }
 };
@@ -132,6 +140,15 @@ export const setInvoiceToDraft = async (invoiceId) => {
 export const getInvoicePayments = async (invoiceId) => {
   try {
     const response = await api.get(`/invoices/${invoiceId}/payments`);
+    console.log(` Paiements facture ${invoiceId}:`, response.data);
+    
+    if (Array.isArray(response.data)) {
+      response.data.forEach((p, i) => {
+        //  Affichage COMPLET pour voir toutes les clés
+        console.log(`    Paiement [${i}] - TOUTES LES CLÉS:`, Object.keys(p));
+        console.log(`    Paiement [${i}] - OBJET COMPLET:`, JSON.stringify(p, null, 2));
+      });
+    }
     return response.data;
   } catch (error) {
     if (error.response?.status === 404) return [];
@@ -139,16 +156,49 @@ export const getInvoicePayments = async (invoiceId) => {
   }
 };
 
+// Récupère un paiement Dolibarr complet (avec rowid) à partir de sa ref
+export const getPaymentByRef = async (ref) => {
+  try {
+    console.log(` Recherche paiement par ref="${ref}"`);
+    const response = await api.get('/paiements', {
+      params: {
+        sqlfilters: `(t.ref:=:'${ref}')`,
+        limit: 1
+      }
+    });
+    const list = Array.isArray(response.data) ? response.data : [];
+    console.log(`   → ${list.length} résultat(s)`, list[0] || null);
+    return list[0] || null;
+  } catch (error) {
+    console.error(` Erreur getPaymentByRef("${ref}"):`, {
+      status: error.response?.status,
+      data: error.response?.data,
+      message: error.message
+    });
+    return null;
+  }
+};
+
 // Supprimer un paiement - Endpoint: DELETE /paiements/{id}
 export const deletePayment = async (paymentId) => {
+  console.log(`%c DELETE /paiements/${paymentId}`, 'color: orange; font-weight: bold');
+  
+  if (!paymentId || paymentId === 'undefined') {
+    console.error(' ID de paiement invalide:', paymentId);
+    throw new Error('ID de paiement invalide');
+  }
+  
   try {
-    // Vérifier que l'ID est valide
-    if (!paymentId || paymentId === 'undefined') {
-      throw new Error('ID de paiement invalide');
-    }
     const response = await api.delete(`/paiements/${paymentId}`);
+    console.log(`%c Réponse Dolibarr (${response.status}):`, 'color: green; font-weight: bold', response.data);
     return response.data;
   } catch (error) {
+    console.error(` Erreur deletePayment(${paymentId}):`, {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      message: error.message
+    });
     throw error;
   }
 };
@@ -172,7 +222,7 @@ export const createPayment = async (invoiceId, paymentData) => {
     const response = await api.post('/invoices/paymentsdistributed', body);
     return response.data;
   } catch (error) {
-    console.error('❌ Erreur createPayment:', error.response?.data || error.message);
+    console.error(' Erreur createPayment:', error.response?.data || error.message);
     throw error;
   }
 };
@@ -234,6 +284,27 @@ export const findThirdpartyByCode = async (code_client) => {
   } catch (error) {
     console.error('Erreur findThirdpartyByCode:', error.message);
     return null;
+  }
+};
+
+// Récupère les tiers dont le code_client commence par un préfixe donné
+export const getCustomersByCodePrefix = async (prefix) => {
+  try {
+    console.log(` Recherche tiers avec code_client commençant par "${prefix}"`);
+    const response = await api.get('/thirdparties', { params: { limit: 1000 } });
+    const list = Array.isArray(response.data) ? response.data : [];
+    const filtered = list.filter(t => 
+      t.code_client && 
+      String(t.code_client).trim().startsWith(prefix)
+    );
+    console.log(`   → ${filtered.length} tiers trouvé(s) sur ${list.length} total`);
+    filtered.forEach(t => {
+      console.log(`      id=${t.id} | code_client=${t.code_client} | name=${t.name}`);
+    });
+    return filtered;
+  } catch (error) {
+    console.error(` Erreur getCustomersByCodePrefix("${prefix}"):`, error.message);
+    return [];
   }
 };
 
@@ -381,19 +452,6 @@ export const getClientInvoices = async (socid) => {
     const response = await api.get('/invoices', { params: { limit: 1000 } });
     const list = Array.isArray(response.data) ? response.data : [];
     return list.filter(inv => String(inv.socid) === String(socid));
-  } catch (error) {
-    throw error;
-  }
-};
-
-// ========== RÉINITIALISATION COMPLÈTE (optionnelle) ==========
-
-export const resetData = async () => {
-  try {
-    const response = await api.delete('/setup/emptyDatabase', {
-      params: { target: 'all' }
-    });
-    return response.data;
   } catch (error) {
     throw error;
   }

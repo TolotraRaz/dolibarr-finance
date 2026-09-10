@@ -15,23 +15,23 @@ const Reinitialisation = () => {
   });
 
   const tablesList = [
-    { id: 'paiements', label: 'Paiements (llx_paiement, llx_paiement_facture)', icon: '💰' },
-    { id: 'factureDet', label: 'Lignes de facture (llx_facturedet)', icon: '📋' },
-    { id: 'factures', label: 'Factures (llx_facture)', icon: '📊' },
-    { id: 'societes', label: 'Tiers/Clients (llx_societe)', icon: '🏢' },
-    { id: 'produits', label: 'Produits (llx_product, llx_product_price)', icon: '📦' },
-    { id: 'banque', label: 'Écritures bancaires (llx_bank)', icon: '🏦' }
+    { id: 'paiements', label: 'Paiements (llx_paiement, llx_paiement_facture)'},
+    { id: 'factureDet', label: 'Lignes de facture (llx_facturedet)'},
+    { id: 'factures', label: 'Factures (llx_facture)'},
+    { id: 'societes', label: 'Tiers/Clients (llx_societe)'},
+    { id: 'produits', label: 'Produits (llx_product, llx_product_price)'},
+    { id: 'banque', label: 'Écritures bancaires (llx_bank)'}
   ];
 
   const handleReset = async () => {
     const selected = Object.keys(selectedTables).filter(key => selectedTables[key]);
     if (selected.length === 0) {
-      alert('⚠️ Veuillez sélectionner au moins une table à réinitialiser.');
+      alert('Veuillez sélectionner au moins une table à réinitialiser.');
       return;
     }
 
     // Avertissement sur l'ordre de suppression
-    const confirmMessage = `⚠️ ATTENTION : La suppression se fait dans cet ordre :\n\n` +
+    const confirmMessage = `ATTENTION : La suppression se fait dans cet ordre :\n\n` +
       `1. Écritures bancaires\n` +
       `2. Paiements\n` +
       `3. Lignes de facture\n` +
@@ -39,7 +39,7 @@ const Reinitialisation = () => {
       `5. Tiers/Clients\n` +
       `6. Produits\n\n` +
       `Tables sélectionnées :\n${selected.map(id => `  ${tablesList.find(t => t.id === id)?.icon} ${tablesList.find(t => t.id === id)?.label}`).join('\n')}\n\n` +
-      `🔴 Cette action est IRREVERSIBLE !`;
+      `Cette action est IRREVERSIBLE !`;
 
     if (!window.confirm(confirmMessage)) return;
 
@@ -58,15 +58,15 @@ const Reinitialisation = () => {
       setResult({
         success: errorCount === 0,
         message: errorCount === 0
-          ? `✅ Réinitialisation terminée avec succès ! ${successCount} élément(s) supprimé(s)`
-          : `⚠️ Réinitialisation partielle : ${successCount} supprimé(s), ${errorCount} erreur(s)`,
+          ? `Réinitialisation terminée avec succès ! ${successCount} élément(s) supprimé(s)`
+          : `Réinitialisation partielle : ${successCount} supprimé(s), ${errorCount} erreur(s)`,
         details: stats.details || {},
         errorDetails: stats.errorDetails || []
       });
     } catch (error) {
       setResult({
         success: false,
-        message: `❌ Erreur lors de la réinitialisation : ${error.message}`,
+        message: `Erreur lors de la réinitialisation : ${error.message}`,
         details: {},
         errorDetails: [error.message]
       });
@@ -93,7 +93,7 @@ const Reinitialisation = () => {
         
         <div style={{ background: '#fff3cd', border: '1px solid #ffc107', borderRadius: '4px', padding: '15px', marginBottom: '20px' }}>
           <p style={{ color: '#856404', margin: 0 }}>
-            <strong>⚠️ Attention :</strong> Sélectionnez les tables à réinitialiser. 
+            <strong>Attention :</strong> Sélectionnez les tables à réinitialiser. 
             Toutes les données seront supprimées définitivement dans l'ordre : 
             <strong> Banque → Paiements → Lignes → Factures → Tiers → Produits</strong>
           </p>
@@ -102,7 +102,7 @@ const Reinitialisation = () => {
         {/* Sélection des tables */}
         <div style={{ marginBottom: '20px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-            <h3 style={{ margin: 0 }}>📋 Tables à réinitialiser</h3>
+            <h3 style={{ margin: 0 }}>Tables à réinitialiser</h3>
             <label style={{ cursor: 'pointer', fontSize: '14px' }}>
               <input 
                 type="checkbox" 
@@ -166,7 +166,7 @@ const Reinitialisation = () => {
               </div>
             </div>
             <p style={{ textAlign: 'center', marginTop: '8px', fontSize: '14px', color: '#666' }}>
-              🔄 Réinitialisation en cours... {progress}%
+               Réinitialisation en cours... {progress}%
             </p>
           </div>
         )}
@@ -184,11 +184,11 @@ const Reinitialisation = () => {
               cursor: (loading || !isAnySelected) ? 'not-allowed' : 'pointer'
             }}
           >
-            {loading ? '⏳ Réinitialisation en cours...' : '🚀 Réinitialiser les données sélectionnées'}
+            {loading ? 'Réinitialisation en cours...' : 'Réinitialiser les données sélectionnées'}
           </button>
           {!isAnySelected && !loading && (
             <p style={{ color: '#dc3545', fontSize: '14px', marginTop: '10px' }}>
-              ⚠️ Sélectionnez au moins une table
+              Sélectionnez au moins une table
             </p>
           )}
         </div>
@@ -203,7 +203,7 @@ const Reinitialisation = () => {
             borderRadius: '8px'
           }}>
             <h3 style={{ color: result.success ? '#155724' : '#721c24', marginTop: 0 }}>
-              📊 Résultats de la réinitialisation
+              Résultats de la réinitialisation
             </h3>
             <p style={{ color: result.success ? '#155724' : '#721c24', fontSize: '16px', fontWeight: '500' }}>
               {result.message}
@@ -226,8 +226,8 @@ const Reinitialisation = () => {
                       }}>
                         <strong>{tableInfo?.icon} {tableInfo?.label || table}</strong>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px', marginTop: '5px' }}>
-                          <span style={{ color: '#28a745' }}>✅ {stats.success || 0} supprimé(s)</span>
-                          {(stats.errors || 0) > 0 && <span style={{ color: '#dc3545' }}>❌ {stats.errors} erreur(s)</span>}
+                          <span style={{ color: '#28a745' }}>{stats.success || 0} supprimé(s)</span>
+                          {(stats.errors || 0) > 0 && <span style={{ color: '#dc3545' }}>{stats.errors} erreur(s)</span>}
                         </div>
                       </div>
                     );
@@ -238,7 +238,7 @@ const Reinitialisation = () => {
 
             {result.errorDetails && result.errorDetails.length > 0 && (
               <div style={{ marginTop: '15px' }}>
-                <h4 style={{ color: '#721c24' }}>❌ Détails des erreurs :</h4>
+                <h4 style={{ color: '#721c24' }}>Détails des erreurs :</h4>
                 <ul style={{ color: '#721c24', paddingLeft: '20px', maxHeight: '200px', overflowY: 'auto' }}>
                   {result.errorDetails.map((d, i) => <li key={i}>{d}</li>)}
                 </ul>
